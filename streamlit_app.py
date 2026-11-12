@@ -6,7 +6,7 @@ from PIL import Image
 
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(
-    page_title="MedGuide AI — Klinik Triyaj ve Asistan",
+    page_title="Novacura AI — Akıllı Klinik Triyaj & Medikal Zeka",
     page_icon="🩺",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -207,7 +207,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {
             "role": "assistant",
-            "content": "Merhaba! Ben **MedGuide AI** klinik triyaj ve medikal eğitim asistanıyım. 🩺\n\nSemptomlarınızı detaylandırabilir, tıbbi terminoloji veya ilaç etkileşimleri hakkında danışabilir, cilt lezyonu veya reçete görseli yükleyebilir ya da sesli danışma gerçekleştirebilirsiniz.\n\n*Nasıl yardımcı olabilirim?*",
+            "content": "Merhaba! Ben **Novacura AI** akıllı klinik triyaj ve medikal karar destek asistanıyım. 🩺\n\nSemptomlarınızı detaylandırabilir, tıbbi terminoloji veya ilaç etkileşimleri hakkında danışabilir, cilt lezyonu veya reçete görseli yükleyebilir ya da sesli danışma gerçekleştirebilirsiniz.\n\n*Nasıl yardımcı olabilirim?*",
             "sources": [],
             "tools": []
         }
@@ -272,11 +272,11 @@ def transcribe_audio_whisper(audio_bytes: bytes, filename: str = "voice.wav") ->
 
 # ----------------- SIDEBAR -----------------
 with st.sidebar:
-    st.markdown('<div class="sidebar-section-title">🏥 Konsültasyon Ayarları</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section-title">🏥 Novacura Konsültasyon Paneli</div>', unsafe_allow_html=True)
     
     # System Status
     if APP_CONFIGURED:
-        st.markdown('<div class="badge badge-success">● Medikal Motor Çevrimiçi</div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge badge-success">● Novacura Motoru Çevrimiçi</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="badge" style="background:#fee2e2;color:#991b1b;">⚠ API Anahtarları Eksik</div>', unsafe_allow_html=True)
 
@@ -316,7 +316,7 @@ with st.sidebar:
         st.session_state.pending_prompt = None
         st.rerun()
 
-    st.caption("© 2026 MedGuide AI • Tıbbi Karar Destek Sistemi")
+    st.caption("© 2026 Novacura AI • Akıllı Biyomedikal Triyaj Sistemi")
 
 # ----------------- MAIN WORKSPACE -----------------
 
@@ -326,7 +326,7 @@ st.markdown("""
     <div class="clinical-title-box">
         <div class="clinical-icon-badge">⚕️</div>
         <div>
-            <h1 class="clinical-title">MedGuide AI <span style="font-size:0.75rem; font-weight:600; background:#f0f9ff; color:#0284c7; padding:3px 8px; border-radius:6px; border:1px solid #bae6fd; vertical-align:middle;">Klinik Destek v1.0</span></h1>
+            <h1 class="clinical-title">Novacura AI <span style="font-size:0.75rem; font-weight:600; background:#f0f9ff; color:#0284c7; padding:3px 8px; border-radius:6px; border:1px solid #bae6fd; vertical-align:middle;">Klinik Zeka v1.0</span></h1>
             <p class="clinical-subtitle">Gale Tıp Ansiklopedisi (RAG) • Canlı Literatür & Kılavuz Taraması • Multimodal Görüntüleme</p>
         </div>
     </div>
@@ -341,7 +341,7 @@ st.markdown("""
 <div class="triage-alert">
     <span style="font-size:1.2rem; line-height:1;">🚨</span>
     <div>
-        <strong>ACİL TIBBİ UYARI:</strong> MedGuide AI bir hekim veya resmi tanı aracı değildir. Ani göğüs ağrısı, konuşma güçlüğü, nefes darlığı, kontrolsüz kanama veya bilinç bulanıklığı gibi kritik belirtilerde lütfen vakit kaybetmeden <strong>112 Acil Çağrı Merkezi</strong>'ni arayınız.
+        <strong>ACİL TIBBİ UYARI:</strong> Novacura AI bir hekim veya resmi tanı aracı değildir. Ani göğüs ağrısı, konuşma güçlüğü, nefes darlığı, kontrolsüz kanama veya bilinç bulanıklığı gibi kritik belirtilerde lütfen vakit kaybetmeden <strong>112 Acil Çağrı Merkezi</strong>'ni arayınız.
     </div>
 </div>
 """, unsafe_allow_html=True)
