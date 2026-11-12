@@ -207,3 +207,4 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## 📄 Lisans
 
 Bu proje **MIT Lisansı** altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına göz atabilirsiniz.
+
