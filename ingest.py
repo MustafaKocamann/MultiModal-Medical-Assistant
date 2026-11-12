@@ -13,9 +13,15 @@ def chunks(text, size=800, overlap=100):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pdf', default='data/medical_book.pdf')
+    parser.add_argument('--pdf', default=None)
     args = parser.parse_args()
-    pdf = Path(args.pdf)
+    
+    if args.pdf:
+        pdf = Path(args.pdf)
+    else:
+        # Fallback for Medical_book.pdf / medical_book.pdf across OS
+        pdf = Path('data/Medical_book.pdf') if Path('data/Medical_book.pdf').exists() else Path('data/medical_book.pdf')
+
     if not pdf.exists():
         raise SystemExit(f'PDF not found: {pdf}')
     index = ensure_index()
