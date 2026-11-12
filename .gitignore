@@ -47,5 +47,7 @@ Desktop.ini
 
 # Local vector stores / SQLite DBs / temporary caches
 *.sqlite3
+*.db
+medical_memory.db
 .cache/
 
