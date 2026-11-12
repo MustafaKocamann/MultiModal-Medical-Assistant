@@ -1,8 +1,10 @@
 import base64
 import io
+import json
 import uuid
 import secrets
 import streamlit as st
+import streamlit.components.v1 as components
 from PIL import Image
 
 # ----------------- PAGE CONFIG -----------------
@@ -26,8 +28,8 @@ st.markdown("""
     /* Container Spacing */
     .block-container {
         padding-top: 1.2rem;
-        padding-bottom: 3rem;
-        max-width: 1050px;
+        padding-bottom: 2rem;
+        max-width: 1000px;
     }
 
     /* Modern Clinical Header */
@@ -35,8 +37,8 @@ st.markdown("""
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
-        padding: 20px 24px;
-        margin-bottom: 1.25rem;
+        padding: 18px 24px;
+        margin-bottom: 1rem;
         box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
         display: flex;
         justify-content: space-between;
@@ -52,21 +54,21 @@ st.markdown("""
     }
 
     .clinical-icon-badge {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
         color: white;
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 22px;
         box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
     }
 
     .clinical-title {
         margin: 0;
-        font-size: 1.45rem;
+        font-size: 1.35rem;
         font-weight: 700;
         color: #0f172a;
         letter-spacing: -0.3px;
@@ -74,7 +76,7 @@ st.markdown("""
 
     .clinical-subtitle {
         margin: 2px 0 0 0;
-        font-size: 0.88rem;
+        font-size: 0.85rem;
         color: #64748b;
         font-weight: 400;
     }
@@ -85,8 +87,8 @@ st.markdown("""
         border: 1px solid #fecdd3;
         border-left: 4px solid #e11d48;
         border-radius: 10px;
-        padding: 12px 16px;
-        margin-bottom: 1.5rem;
+        padding: 10px 16px;
+        margin-bottom: 1.2rem;
         display: flex;
         align-items: flex-start;
         gap: 12px;
@@ -171,23 +173,82 @@ st.markdown("""
         line-height: 1.6;
     }
 
-    /* Buttons */
-    div.stButton > button {
+    /* Sidebar Buttons */
+    section[data-testid="stSidebar"] div.stButton > button {
         border-radius: 8px;
         font-weight: 500;
         font-size: 0.85rem;
-        transition: all 0.15s ease-in-out;
         border: 1px solid #e2e8f0;
         background-color: #ffffff;
         color: #1e293b;
         text-align: left;
     }
 
-    div.stButton > button:hover {
+    section[data-testid="stSidebar"] div.stButton > button:hover {
         border-color: #0284c7;
         color: #0284c7;
         background-color: #f0f9ff;
-        transform: translateY(-1px);
+    }
+
+    /* Input Textarea */
+    .stTextArea textarea {
+        border-radius: 10px 10px 0 0 !important;
+        border: 1px solid #cbd5e1 !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        font-size: 0.95rem !important;
+        padding: 12px 16px !important;
+        box-shadow: none !important;
+        background-color: #ffffff !important;
+    }
+
+    .stTextArea textarea:focus {
+        border-color: #0b5c63 !important;
+        box-shadow: none !important;
+    }
+
+    /* Action Toolbar Container */
+    .chat-input-box {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 6px;
+        margin-top: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    /* Action Buttons in Toolbar */
+    .toolbar-row div.stButton > button {
+        background-color: #f1f5f9 !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 6px !important;
+        color: #334155 !important;
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        padding: 5px 12px !important;
+        text-align: center !important;
+    }
+
+    .toolbar-row div.stButton > button:hover {
+        background-color: #e2e8f0 !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    /* Send Button */
+    .send-col div.stButton > button {
+        background-color: #0b5c63 !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        padding: 5px 20px !important;
+        text-align: center !important;
+    }
+
+    .send-col div.stButton > button:hover {
+        background-color: #08494f !important;
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -261,6 +322,21 @@ if "thread_id" not in st.session_state:
 
 if "pending_prompt" not in st.session_state:
     st.session_state.pending_prompt = None
+
+if "active_multimodal" not in st.session_state:
+    st.session_state.active_multimodal = None  # None, 'image', 'camera', 'voice'
+
+if "attached_image_bytes" not in st.session_state:
+    st.session_state.attached_image_bytes = None
+
+if "attached_mime" not in st.session_state:
+    st.session_state.attached_mime = "image/jpeg"
+
+if "last_answer_for_tts" not in st.session_state:
+    st.session_state.last_answer_for_tts = ""
+
+if "tts_trigger_text" not in st.session_state:
+    st.session_state.tts_trigger_text = None
 
 # ----------------- HELPER FUNCTIONS -----------------
 def analyze_image_with_vision(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
@@ -359,6 +435,8 @@ with st.sidebar:
             st.session_state.messages = [st.session_state.messages[0]]
             st.session_state.thread_id = str(uuid.uuid4())
             st.session_state.pending_prompt = None
+            st.session_state.attached_image_bytes = None
+            st.session_state.active_multimodal = None
             st.rerun()
     with col_logout:
         if settings and settings.api_token:
@@ -396,37 +474,21 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 3. Multimodal Media Panel (Image & Audio)
-attached_image_bytes = None
-attached_mime = "image/jpeg"
-
-with st.expander("📎 Çok Modlu Klinik Girdi (Reçete/Görüntü İnceleme veya Sesli Danışma)", expanded=False):
-    col_img, col_audio = st.columns(2)
-    
-    with col_img:
-        st.markdown("<small><strong>📷 Tıbbi Görsel / Reçete / Dermatoloji</strong></small>", unsafe_allow_html=True)
-        img_upload = st.file_uploader("Görsel seçiniz (PNG, JPG, WEBP - Max 5MB)", type=["png", "jpg", "jpeg", "webp"], key="img_upload", label_visibility="collapsed")
-        if img_upload:
-            attached_image_bytes = img_upload.read()
-            attached_mime = img_upload.type
-            st.image(attached_image_bytes, caption="Yüklenen İnceleme Görseli", use_container_width=True)
-            
-    with col_audio:
-        st.markdown("<small><strong>🎙️ Sesli Soru / Transkripsiyon (Whisper)</strong></small>", unsafe_allow_html=True)
-        try:
-            audio_data = st.audio_input("Ses kaydetmek için tıklayın", label_visibility="collapsed")
-        except AttributeError:
-            audio_data = st.file_uploader("Ses dosyası yükleyin (WAV/MP3)", type=["wav", "mp3", "webm"], label_visibility="collapsed")
-        
-        if audio_data:
-            st.audio(audio_data)
-            if st.button("Transkribe Et ve Soruya Ekle", key="transcribe_action_btn"):
-                with st.spinner("Whisper modeli ile ses çözümleniyor..."):
-                    result_txt = transcribe_audio_whisper(audio_data.read(), filename="voice.wav")
-                    if result_txt:
-                        st.session_state.pending_prompt = result_txt
-                        st.success(f"Metin: {result_txt}")
-                        st.rerun()
+# 3. Audio Readout (TTS) Execution if triggered
+if st.session_state.tts_trigger_text:
+    clean_text = st.session_state.tts_trigger_text.replace("\n", " ").replace('"', "'")[:800]
+    components.html(f"""
+    <script>
+        if ('speechSynthesis' in window) {{
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance({json.dumps(clean_text)});
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }}
+    </script>
+    """, height=0)
+    st.session_state.tts_trigger_text = None
 
 # 4. Chat Feed
 for msg in st.session_state.messages:
@@ -461,42 +523,136 @@ for msg in st.session_state.messages:
                             </div>
                             """, unsafe_allow_html=True)
 
-# 5. User Input Handling
-user_input = st.chat_input("Klinik sorunuzu, semptomlarınızı veya ilaç adını buraya yazınız...")
+# ----------------- MULTIMODAL TOOLBAR & INPUT AREA -----------------
 
-# If pending prompt from sidebar button or voice transcription
-if st.session_state.pending_prompt:
-    user_input = st.session_state.pending_prompt
-    st.session_state.pending_prompt = None
+# Preview of Attached Image if any
+if st.session_state.attached_image_bytes:
+    col_prev1, col_prev2 = st.columns([1, 4])
+    with col_prev1:
+        st.image(st.session_state.attached_image_bytes, caption="Seçilen Görsel", width=140)
+    with col_prev2:
+        st.markdown("<small style='color:#059669;'>✓ Tıbbi görsel eklendi. Sorunuzla birlikte analiz edilecek.</small>", unsafe_allow_html=True)
+        if st.button("Görseli Kaldır ×", key="btn_remove_image"):
+            st.session_state.attached_image_bytes = None
+            st.rerun()
 
-if user_input:
+# Dynamic Tool Display (Image Upload / Camera / Voice)
+if st.session_state.active_multimodal == "image":
+    st.markdown("##### 📎 Görsel Yükleme (Reçete / Rapor / Lezyon)")
+    uploaded_file = st.file_uploader("Bir görsel seçin (PNG, JPG, WEBP)", type=["png", "jpg", "jpeg", "webp"], key="modal_img_uploader")
+    if uploaded_file:
+        st.session_state.attached_image_bytes = uploaded_file.read()
+        st.session_state.attached_mime = uploaded_file.type
+        st.session_state.active_multimodal = None
+        st.success("Görsel başarıyla eklendi!")
+        st.rerun()
+
+elif st.session_state.active_multimodal == "camera":
+    st.markdown("##### 📷 Kamera ile Çekim (Kamera İzni Veriniz)")
+    camera_photo = st.camera_input("Fotoğraf çekmek için butona basın", key="modal_camera_input")
+    if camera_photo:
+        st.session_state.attached_image_bytes = camera_photo.read()
+        st.session_state.attached_mime = "image/jpeg"
+        st.session_state.active_multimodal = None
+        st.success("Kamera görüntüsü eklendi!")
+        st.rerun()
+
+elif st.session_state.active_multimodal == "voice":
+    st.markdown("##### 🎤 Sesli Soru Bırak (Whisper STT)")
+    try:
+        rec_audio = st.audio_input("Kayda başlamak için mikrofona tıklayınız", key="modal_audio_input")
+    except AttributeError:
+        rec_audio = st.file_uploader("Ses dosyası yükleyin (WAV/MP3)", type=["wav", "mp3", "webm"], key="modal_audio_input")
+
+    if rec_audio:
+        with st.spinner("Whisper modeli ile ses çözümleniyor..."):
+            transcribed = transcribe_audio_whisper(rec_audio.read(), filename="mic_voice.wav")
+            if transcribed:
+                st.session_state.pending_prompt = transcribed
+                st.session_state.active_multimodal = None
+                st.success(f"Çözümlendi: *{transcribed}*")
+                st.rerun()
+
+# Input Form with Custom Toolbar Layout
+with st.form("novacura_chat_form", clear_on_submit=True):
+    # Textarea matching user's screenshot placeholder
+    default_text = st.session_state.pending_prompt or ""
+    user_typed_message = st.text_area(
+        label="Message",
+        value=default_text,
+        placeholder="Describe your symptoms or ask a question...",
+        label_visibility="collapsed",
+        height=75
+    )
+    if st.session_state.pending_prompt:
+        st.session_state.pending_prompt = None
+
+    # Toolbar row matching user's screenshot layout: [Image] [Camera] [Voice] [Read answer] ...... [Send ➜]
+    col_t1, col_t2, col_t3, col_t4, col_spacer, col_send = st.columns([1.1, 1.2, 1.1, 1.5, 2.4, 1.2])
+
+    with col_t1:
+        img_clicked = st.form_submit_button("📎 Image")
+    with col_t2:
+        cam_clicked = st.form_submit_button("📷 Camera")
+    with col_t3:
+        voice_clicked = st.form_submit_button("🎤 Voice")
+    with col_t4:
+        read_clicked = st.form_submit_button("🔊 Read answer")
+    with col_send:
+        st.markdown('<div class="send-col">', unsafe_allow_html=True)
+        send_clicked = st.form_submit_button("Send ➜")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# Process Toolbar Button Clicks
+if img_clicked:
+    st.session_state.active_multimodal = "image" if st.session_state.active_multimodal != "image" else None
+    st.rerun()
+
+if cam_clicked:
+    st.session_state.active_multimodal = "camera" if st.session_state.active_multimodal != "camera" else None
+    st.rerun()
+
+if voice_clicked:
+    st.session_state.active_multimodal = "voice" if st.session_state.active_multimodal != "voice" else None
+    st.rerun()
+
+if read_clicked:
+    if st.session_state.last_answer_for_tts:
+        st.session_state.tts_trigger_text = st.session_state.last_answer_for_tts
+        st.toast("🔊 Yanıt seslendiriliyor...", icon="🔊")
+        st.rerun()
+    else:
+        st.info("Henüz seslendirilecek bir asistan yanıtı bulunmuyor.")
+
+# Process Send Action
+if send_clicked and (user_typed_message.strip() or st.session_state.attached_image_bytes):
     if not APP_CONFIGURED:
         st.error("Sistem API anahtarları `.env` içerisinde yapılandırılmalıdır.")
         st.stop()
 
-    # Append User Message
+    prompt_to_send = user_typed_message.strip() or "Lütfen ekteki medikal görseli inceleyip klinik gözlemlerinizi belirtiniz."
+    
+    # Store User Message in History
     st.session_state.messages.append({
         "role": "user",
-        "content": user_input,
+        "content": prompt_to_send,
         "sources": [],
         "tools": []
     })
 
-    with st.chat_message("user", avatar="🧑‍💼"):
-        st.markdown(user_input)
-
-    # Assistant Response Generation
+    # Execute Model
     with st.chat_message("assistant", avatar="🩺"):
         status_box = st.status("Klinik vaka değerlendiriliyor...", expanded=True)
         
-        # Step A: Multimodal Vision Check
+        # Multimodal Vision Analysis if attached image exists
         image_findings = ""
-        if attached_image_bytes:
+        if st.session_state.attached_image_bytes:
             status_box.write("👁️ Tıbbi görsel analiz ediliyor (Nemotron Vision)...")
-            image_findings = analyze_image_with_vision(attached_image_bytes, mime_type=attached_mime)
+            image_findings = analyze_image_with_vision(st.session_state.attached_image_bytes, mime_type=st.session_state.attached_mime)
+            # Clear attached image after submission
+            st.session_state.attached_image_bytes = None
         
-        # Step B: Retrieval & Routing via LangGraph
-        status_box.write("📚 Tıp kütüphanesi taranıyor ve güncel kılavuzlar araştırılıyor...")
+        status_box.write("📚 Tıp literatürü taranıyor ve kılavuzlar araştırılıyor...")
         
         formatted_history = []
         for m in st.session_state.messages[-8:]:
@@ -505,7 +661,7 @@ if user_input:
 
         try:
             config = {"configurable": {"thread_id": st.session_state.thread_id}}
-            enriched_question = f"[{triage_context}] {user_input}"
+            enriched_question = f"[{triage_context}] {prompt_to_send}"
             
             state = graph.invoke(
                 {
@@ -523,6 +679,7 @@ if user_input:
             status_box.update(label="Değerlendirme tamamlandı.", state="complete", expanded=False)
 
             answer = state.get("answer", "Klinik değerlendirme tamamlanamadı.")
+            st.session_state.last_answer_for_tts = answer
             st.markdown(answer)
 
             # Tools Tracking
@@ -549,7 +706,7 @@ if user_input:
                     "content": item.get("content", "")
                 })
 
-            # Display Tools
+            # Display Tools Badges
             badges_html = " ".join([f'<span class="badge-tool">🔍 {tool}</span>' for tool in tools_list])
             st.markdown(f'<div style="margin-top:6px; margin-bottom:6px;">{badges_html}</div>', unsafe_allow_html=True)
 
@@ -572,13 +729,14 @@ if user_input:
                             </div>
                             """, unsafe_allow_html=True)
 
-            # Store in session state
+            # Save in session state
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": answer,
                 "sources": sources_pkg,
                 "tools": tools_list
             })
+            st.rerun()
 
         except Exception as exc:
             status_box.update(label="Hata oluştu", state="error", expanded=False)
