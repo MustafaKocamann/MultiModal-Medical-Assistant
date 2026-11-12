@@ -35,7 +35,7 @@ def auth(authorization: str | None):
         raise HTTPException(status_code=401, detail='Invalid API token')
 
 
-def inspect_image(data):
+def inspect_image(data: str | None) -> str:
     if not data:
         return ''
     try:
@@ -76,7 +76,8 @@ def health():
     return {
         'status': 'ok',
         'configured': bool(settings.openrouter_api_key and settings.pinecone_api_key),
-        'tavily': bool(settings.tavily_api_key)
+        'tavily': bool(settings.tavily_api_key),
+        'stt_model': settings.openrouter_stt_model
     }
 
 
@@ -142,14 +143,30 @@ async def transcribe(file: UploadFile = File(...), authorization: str | None = H
     data = await file.read(10_000_001)
     if len(data) > 10_000_000:
         raise HTTPException(413, 'Audio exceeds 10 MB')
+    
+    if not settings.openrouter_api_key and not settings.openai_api_key:
+        raise HTTPException(503, 'Set OPENROUTER_API_KEY in .env')
+
     audio = io.BytesIO(data)
-    audio.name = 'voice.webm'
+    audio.name = file.filename or 'voice.webm'
+    
     try:
-        api_key = settings.openai_api_key or settings.openrouter_api_key
-        result = OpenAI(api_key=api_key).audio.transcriptions.create(model='whisper-1', file=audio)
+        # OpenRouter ile OpenAI Whisper STT transkripsiyonu
+        client = OpenAI(
+            base_url=settings.openrouter_base_url,
+            api_key=settings.openrouter_api_key or settings.openai_api_key
+        )
+        result = client.audio.transcriptions.create(
+            model=settings.openrouter_stt_model,
+            file=audio
+        )
         return {'text': result.text}
-    except Exception:
-        raise HTTPException(502, 'Speech transcription unavailable')
+    except Exception as exc:
+        print('Transcription error:', repr(exc), flush=True)
+        err_msg = str(exc)
+        if '402' in err_msg or 'balance' in err_msg.lower():
+            raise HTTPException(502, 'OpenRouter audio requires at least $0.50 balance')
+        raise HTTPException(502, f'Speech transcription unavailable: {exc}')
 
 
 @app.post('/api/speak')
@@ -158,9 +175,13 @@ def speak(payload: dict, authorization: str | None = Header(default=None)):
     text = str(payload.get('text', ''))[:3000]
     if not text:
         raise HTTPException(400, 'Missing text')
+
+    api_key = settings.openai_api_key or settings.openrouter_api_key
+    base_url = None if settings.openai_api_key else settings.openrouter_base_url
     try:
-        api_key = settings.openai_api_key or settings.openrouter_api_key
-        speech = OpenAI(api_key=api_key).audio.speech.create(model='tts-1', voice='alloy', input=text)
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        speech = client.audio.speech.create(model='tts-1', voice='alloy', input=text)
         return Response(content=speech.content, media_type='audio/mpeg')
-    except Exception:
-        raise HTTPException(502, 'Speech synthesis unavailable')
+    except Exception as exc:
+        print('Speak error:', repr(exc), flush=True)
+        raise HTTPException(502, 'Speech synthesis unavailable (TTS requires OpenAI API key)')

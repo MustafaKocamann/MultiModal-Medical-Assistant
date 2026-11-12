@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     tavily_api_key: str = ''
     pinecone_index: str = 'medical-agent-demo'
     openai_chat_model: str = 'nvidia/nemotron-3-ultra-550b-a55b:free'
+    openrouter_stt_model: str = 'openai/whisper-large-v3-turbo'
     google_embed_model: str = 'google/gemini-embedding-001'
     google__model: str = 'google/gemini-embedding-001'
     openai_vision_model: str = 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
