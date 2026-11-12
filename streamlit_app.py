@@ -1,6 +1,7 @@
 import base64
 import io
 import uuid
+import secrets
 import streamlit as st
 from PIL import Image
 
@@ -203,6 +204,48 @@ except Exception as e:
     graph = None
 
 # ----------------- SESSION STATE INIT -----------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+# Auto-login via URL Query Parameter ?token=...
+if not st.session_state.authenticated and settings and settings.api_token:
+    param_token = st.query_params.get("token")
+    if param_token and secrets.compare_digest(param_token, settings.api_token):
+        st.session_state.authenticated = True
+
+# ----------------- ACCESS TOKEN BARRIER -----------------
+if settings and settings.api_token and not st.session_state.authenticated:
+    _, col_login, _ = st.columns([1, 1.8, 1])
+    with col_login:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:32px 28px; box-shadow:0 10px 25px -5px rgba(15,23,42,0.08); text-align:center;">
+            <div style="width:56px; height:56px; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:white; border-radius:14px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:28px; box-shadow:0 4px 12px rgba(2,132,199,0.25);">
+                🔒
+            </div>
+            <h2 style="font-size:1.45rem; font-weight:700; color:#0f172a; margin:0 0 6px;">Novacura AI</h2>
+            <p style="font-size:0.88rem; color:#64748b; margin:0 0 20px;">Yetkili Medikal Karar Destek ve Triyaj Portalı</p>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:20px; font-size:0.8rem; color:#475569; text-align:left; line-height:1.45;">
+                🛡️ <strong>Güvenlik Protokolü:</strong> Bu platform hasta triyajı ve klinik algoritmalar barındırdığından yalnızca yetkilendirilmiş personelin erişimine açıktır.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.form("access_gate_form", clear_on_submit=False):
+            token_input = st.text_input("Erişim Anahtarı (Access Token)", type="password", placeholder="API_TOKEN anahtarınızı giriniz...")
+            submit_btn = st.form_submit_button("Sisteme Giriş Yap ➜", use_container_width=True)
+
+            if submit_btn:
+                if token_input and secrets.compare_digest(token_input.strip(), settings.api_token):
+                    st.session_state.authenticated = True
+                    st.success("Yetkilendirme başarılı! Yönlendiriliyorsunuz...")
+                    st.rerun()
+                else:
+                    st.error("❌ Geçersiz Erişim Anahtarı. Lütfen sistem yöneticisiyle iletişime geçiniz.")
+
+        st.markdown("<p style='text-align:center; font-size:0.75rem; color:#94a3b8; margin-top:20px;'>Novacura HealthTech • HIPAA / KVKK Uyumlu İstemci</p>", unsafe_allow_html=True)
+    st.stop()
+
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {
@@ -310,11 +353,18 @@ with st.sidebar:
         st.caption(f"**Oturum ID:** `{st.session_state.thread_id[:8]}...`")
 
     st.markdown("---")
-    if st.button("🔄 Yeni Konsültasyon Başlat", use_container_width=True):
-        st.session_state.messages = [st.session_state.messages[0]]
-        st.session_state.thread_id = str(uuid.uuid4())
-        st.session_state.pending_prompt = None
-        st.rerun()
+    col_reset, col_logout = st.columns(2)
+    with col_reset:
+        if st.button("🔄 Sıfırla", use_container_width=True, help="Sohbet geçmişini sıfırlar"):
+            st.session_state.messages = [st.session_state.messages[0]]
+            st.session_state.thread_id = str(uuid.uuid4())
+            st.session_state.pending_prompt = None
+            st.rerun()
+    with col_logout:
+        if settings and settings.api_token:
+            if st.button("🔒 Çıkış", use_container_width=True, help="Oturumu sonlandırır"):
+                st.session_state.authenticated = False
+                st.rerun()
 
     st.caption("© 2026 Novacura AI • Akıllı Biyomedikal Triyaj Sistemi")
 
